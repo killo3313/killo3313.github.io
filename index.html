@@ -1,131 +1,376 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>killo</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            background: #0d0d0d;
-            color: #e0e0e0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 40px 20px;
-        }
-
-        .container {
-            max-width: 640px;
-            width: 100%;
-            text-align: center;
-        }
-
-        .avatar-wrapper {
-            width: 160px;
-            height: 160px;
-            border-radius: 50%;
-            overflow: hidden;
-            margin: 0 auto 24px;
-            border: 3px solid #333;
-            box-shadow: 0 0 30px rgba(100, 100, 255, 0.15);
-        }
-
-        .avatar-wrapper img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        h1 {
-            font-size: 2.4rem;
-            font-weight: 600;
-            letter-spacing: 2px;
-            margin-bottom: 8px;
-        }
-
-        .subtitle {
-            font-size: 1rem;
-            color: #888;
-            margin-bottom: 48px;
-            letter-spacing: 1px;
-        }
-
-        .section {
-            background: #1a1a1a;
-            border: 1px solid #2a2a2a;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 20px;
-            text-align: left;
-            transition: border-color 0.2s;
-        }
-
-        .section:focus-within {
-            border-color: #555;
-        }
-
-        .section-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: #666;
-            margin-bottom: 12px;
-        }
-
-        .editable {
-            font-size: 1rem;
-            line-height: 1.7;
-            color: #ccc;
-            outline: none;
-            min-height: 1.7em;
-        }
-
-        .editable:empty::before {
-            content: attr(data-placeholder);
-            color: #444;
-        }
-
-        .footer {
-            margin-top: 40px;
-            font-size: 0.85rem;
-            color: #444;
-        }
-
-        .footer a {
-            color: #666;
-            text-decoration: none;
-        }
-        .footer a:hover {
-            color: #999;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>killo</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0a0a0c; color: #e8e8ec;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 2rem 1.5rem; overflow: hidden;
+    }
+    #canvas-bg {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%; z-index: 0; display: block;
+    }
+    .content {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column; align-items: center;
+      pointer-events: none;
+    }
+    .content * { pointer-events: auto; }
+    .avatar-wrapper {
+      position: relative; margin-bottom: 1.25rem; cursor: pointer;
+    }
+    .avatar-wrapper::before {
+      content: ''; position: absolute; inset: -8px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(120, 200, 255, 0.25) 0%, transparent 70%);
+      animation: avatar-glow 3s ease-in-out infinite;
+    }
+    .avatar {
+      position: relative; width: 120px; height: 120px; border-radius: 50%;
+      object-fit: cover; border: 3px solid #2a2a32; display: block;
+      transition: border-color 0.3s;
+    }
+    .avatar-wrapper:hover .avatar { border-color: #4a5a6a; }
+    @keyframes avatar-glow {
+      0%, 100% { transform: scale(0.9); opacity: 0.5; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+    .name {
+      font-size: 2rem; font-weight: 700; letter-spacing: -0.02em;
+      margin-bottom: 2rem; color: #f0f0f4; position: relative;
+    }
+    .name::after {
+      content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+    }
+    .carousel-stage {
+      perspective: 1100px; perspective-origin: center -60px;
+      width: 100%; display: flex; justify-content: center; align-items: center;
+    }
+    .carousel {
+      position: relative; width: 480px; height: 280px;
+      transform-style: preserve-3d;
+      transition: transform 0.9s cubic-bezier(0.22, 0.97, 0.36, 1);
+    }
+    .card {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      backface-visibility: hidden; border-radius: 14px; padding: 2rem 2.5rem;
+      background: #121216; border: 1px solid #1e1e24; overflow: hidden;
+    }
+    .card::before {
+      content: ''; position: absolute; top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(120, 200, 255, 0.03), transparent);
+      animation: scan 6s ease-in-out infinite; pointer-events: none;
+    }
+    @keyframes scan {
+      0% { left: -100%; } 50% { left: 100%; } 100% { left: 100%; }
+    }
+    .card::after {
+      content: ''; position: absolute; top: -1px; left: -1px; right: -1px; bottom: -1px;
+      border-radius: 15px; border: 1px solid transparent;
+      background: linear-gradient(135deg, rgba(120,200,255,0.15), transparent 40%, transparent 60%, rgba(120,200,255,0.05)) border-box;
+      -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
+    }
+    .card-0 { transform: rotateY(0deg) translateZ(300px); }
+    .card-1 { transform: rotateY(120deg) translateZ(300px); }
+    .card-2 { transform: rotateY(240deg) translateZ(300px); }
+    .card-content {
+      display: flex; flex-direction: column; justify-content: center; height: 100%;
+    }
+    .card-title {
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #6b6b78;
+      margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid #1e1e24;
+    }
+    .card-icon { font-size: 2.5rem; margin-bottom: 0.75rem; line-height: 1; }
+    .card-item {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.6rem 0; font-size: 0.95rem;
+    }
+    .card-item + .card-item { border-top: 1px solid #1e1e24; }
+    .card-item-label {
+      color: #888894; font-weight: 500; font-size: 0.8rem;
+      text-transform: uppercase; letter-spacing: 0.04em; min-width: 60px;
+    }
+    .card-item-value { color: #e8e8ec; font-weight: 500; }
+    .footer {
+      margin-top: 1.5rem; font-size: 0.7rem; text-align: center;
+      color: #404048; letter-spacing: 0.04em;
+    }
+    .hint {
+      margin-top: 0.75rem; font-size: 0.65rem; color: #30303a;
+      letter-spacing: 0.06em;
+    }
+    @media (max-width: 540px) {
+      .carousel { width: 100%; height: 260px; }
+      .card { padding: 1.5rem 1.25rem; }
+      .card-0 { transform: rotateY(0deg) translateZ(180px); }
+      .card-1 { transform: rotateY(120deg) translateZ(180px); }
+      .card-2 { transform: rotateY(240deg) translateZ(180px); }
+      .avatar { width: 100px; height: 100px; }
+      .name { font-size: 1.6rem; }
+      .carousel-stage { perspective-origin: center -40px; }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="avatar-wrapper">
-            <img src="IMG_6308.JPG" alt="killo">
-        </div>
-
-        <h1>killo</h1>
-        <p class="subtitle">/ˈkɪloʊ/</p>
-
-        <div class="section">
-            <div class="section-label">关于我</div>
-            <div class="editable" contenteditable="true" data-placeholder="写一段自我介绍……"></div>
-        </div>
-
-        <div class="section">
-            <div class="section-label">最近在做</div>
-            <div class="editable" contenteditable="true" data-placeholder="分享你最近在忙什么……"></div>
-        </div>
-
-        <div class="footer">
-            <a href="https://github.com/killo3313" target="_blank">GitHub</a>
-        </div>
+  <canvas id="canvas-bg"></canvas>
+  <div class="content">
+    <div class="avatar-wrapper" id="avatarBtn" title="Click to reset">
+      <img class="avatar" src="./avatar.jpg" alt="killo avatar">
     </div>
+    <h1 class="name">killo</h1>
+    <div class="carousel-stage">
+      <div class="carousel" id="carousel">
+        <div class="card card-0">
+          <div class="card-content">
+            <div class="card-title">EARTH ONLINE PLAYER INFO</div>
+            <div class="card-item">
+              <span class="card-item-label">ID</span>
+              <span class="card-item-value">killo</span>
+            </div>
+            <div class="card-item">
+              <span class="card-item-label">LV</span>
+              <span class="card-item-value">21</span>
+            </div>
+            <div class="card-item">
+              <span class="card-item-label">SIGN</span>
+              <span class="card-item-value" style="color:#b0b0bc;font-style:italic;">&ldquo;Keep it locked, oblivion&rdquo;</span>
+            </div>
+          </div>
+        </div>
+        <div class="card card-1">
+          <div class="card-content">
+            <div class="card-icon">🍽️</div>
+            <div class="card-title">FAVORITE FOODS</div>
+            <div class="card-item">
+              <span class="card-item-label">01</span>
+              <span class="card-item-value">🍔 Hamburger</span>
+            </div>
+            <div class="card-item">
+              <span class="card-item-label">02</span>
+              <span class="card-item-value">🥤 Cola</span>
+            </div>
+            <div class="card-item">
+              <span class="card-item-label">03</span>
+              <span class="card-item-value">🥚 Egg Custard</span>
+            </div>
+          </div>
+        </div>
+        <div class="card card-2">
+          <div class="card-content">
+            <div class="card-icon">💫</div>
+            <div class="card-title">WANTS</div>
+            <div class="card-item">
+              <span class="card-item-label">01</span>
+              <span class="card-item-value">🐱 Have a cat</span>
+            </div>
+            <div class="card-item">
+              <span class="card-item-label">02</span>
+              <span class="card-item-value">🏠 Have a home</span>
+            </div>
+            <div class="card-item">
+              <span class="card-item-label">03</span>
+              <span class="card-item-value">💤 Sleep with loved one</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="hint" id="hint">-</div>
+    <div class="footer">/etc/profile</div>
+  </div>
+  <script>
+    var canvas = document.getElementById('canvas-bg');
+    var ctx = canvas.getContext('2d');
+    var W, H;
+    function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // ── Background twinkling stars ──
+    var STAR_COUNT = 200;
+    var bgStars = [];
+    for (var i = 0; i < STAR_COUNT; i++) {
+      bgStars.push({ x: Math.random(), y: Math.random(), r: 0.5 + Math.random() * 1.5, speed: 0.3 + Math.random() * 0.7, phase: Math.random() * Math.PI * 2, baseOpacity: 0.1 + Math.random() * 0.4 });
+    }
+
+    // ── Virgo constellation (interactive) ──
+    var virgoStars = [
+      { label: 'Zavijava',     x: 0.18, y: 0.22 },
+      { label: 'Zaniah',       x: 0.48, y: 0.16 },
+      { label: 'Vindemiatrix', x: 0.72, y: 0.12 },
+      { label: 'Minelauva',    x: 0.40, y: 0.36 },
+      { label: 'Porrima',      x: 0.30, y: 0.52 },
+      { label: 'Auva',         x: 0.58, y: 0.58 },
+      { label: 'Syrma',        x: 0.22, y: 0.68 },
+      { label: 'Spica',        x: 0.45, y: 0.85 },
+    ];
+    var virgoEdges = [[0,1],[0,3],[1,2],[1,3],[3,4],[4,5],[4,6],[4,7],[5,7]];
+    var virgoMotion = { baseX: 0.75, baseY: 0.25, size: 0.18, time: 0, orbitRadiusX: 0.08, orbitRadiusY: 0.05, orbitSpeed: 0.0015, orbitPhaseY: 1.3 };
+
+    // ── Decorative constellations ──
+    var decorations = [
+      {
+        name: 'Cassiopeia',
+        stars: [{x:0.1,y:0.1},{x:0.3,y:0.0},{x:0.5,y:0.15},{x:0.7,y:0.0},{x:0.9,y:0.1}],
+        edges: [[0,1],[1,2],[2,3],[3,4]],
+        baseX: 0.12, baseY: 0.12, size: 0.07, time: 0,
+        orbitRadiusX: 0.04, orbitRadiusY: 0.02, orbitSpeed: 0.0008, orbitPhaseY: 0.7,
+        color: '200, 180, 255'
+      },
+      {
+        name: 'Big Dipper',
+        stars: [{x:0.2,y:0.0},{x:0.4,y:0.0},{x:0.55,y:0.15},{x:0.35,y:0.22},{x:0.65,y:0.22},{x:0.8,y:0.38},{x:1.0,y:0.55}],
+        edges: [[0,1],[1,2],[2,3],[3,0],[2,4],[4,5],[5,6]],
+        baseX: 0.85, baseY: 0.8, size: 0.09, time: 0,
+        orbitRadiusX: 0.03, orbitRadiusY: 0.04, orbitSpeed: 0.0006, orbitPhaseY: 1.1,
+        color: '180, 220, 255'
+      },
+      {
+        name: 'Leo',
+        stars: [{x:0.0,y:0.4},{x:0.15,y:0.25},{x:0.05,y:0.1},{x:0.25,y:0.1},{x:0.4,y:0.2},{x:0.35,y:0.4}],
+        edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[0,5]],
+        baseX: 0.45, baseY: 0.78, size: 0.08, time: 0,
+        orbitRadiusX: 0.05, orbitRadiusY: 0.03, orbitSpeed: 0.001, orbitPhaseY: 0.5,
+        color: '220, 190, 255'
+      },
+      {
+        name: 'Orion',
+        stars: [{x:0.2,y:0.1},{x:0.7,y:0.15},{x:0.35,y:0.45},{x:0.5,y:0.5},{x:0.65,y:0.45},{x:0.25,y:0.85},{x:0.75,y:0.8}],
+        edges: [[0,1],[2,3],[3,4],[0,2],[1,4],[2,5],[4,6]],
+        baseX: 0.15, baseY: 0.7, size: 0.1, time: 0,
+        orbitRadiusX: 0.04, orbitRadiusY: 0.02, orbitSpeed: 0.0007, orbitPhaseY: 0.9,
+        color: '200, 220, 240'
+      },
+    ];
+
+    // ── Carousel ──
+    var carousel = document.getElementById('carousel');
+    var hint = document.getElementById('hint');
+    var currentCard = 0;
+    var totalCards = 3;
+    function rotateToCard(index) {
+      currentCard = index;
+      carousel.style.transform = 'rotateY(' + (-currentCard * 120) + 'deg)';
+      var labels = ['earth online', 'favorite foods', 'wants'];
+      hint.textContent = labels[index];
+    }
+    document.getElementById('avatarBtn').addEventListener('click', function() { rotateToCard(0); });
+
+    // ── Mouse listeners ──
+    var mouseX = -1, mouseY = -1, hoveredStarIdx = -1;
+    canvas.addEventListener('mousemove', function(e) { mouseX = e.clientX; mouseY = e.clientY; });
+    canvas.addEventListener('mouseleave', function() { mouseX = -1; mouseY = -1; if (hoveredStarIdx >= 0) { hoveredStarIdx = -1; canvas.style.cursor = 'default'; } });
+    canvas.addEventListener('click', function(e) {
+      if (hoveredStarIdx === 0) { rotateToCard(1); }
+      else if (hoveredStarIdx === 1) { rotateToCard(2); }
+    });
+
+    // ── Draw helper ──
+    function getAbsStars(starData, cx, cy, scale) {
+      var result = [];
+      for (var si = 0; si < starData.length; si++) {
+        result.push({ absX: cx + (starData[si].x - 0.5) * scale, absY: cy + (starData[si].y - 0.5) * scale });
+      }
+      return result;
+    }
+
+    // ── Main draw loop ──
+    function draw(time) {
+      ctx.clearRect(0, 0, W, H);
+
+      // ── Draw background stars ──
+      for (var bi = 0; bi < bgStars.length; bi++) {
+        var bs = bgStars[bi];
+        var opacity = bs.baseOpacity + Math.sin(time * 0.002 * bs.speed + bs.phase) * 0.3;
+        ctx.beginPath(); ctx.arc(bs.x * W, bs.y * H, bs.r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,' + Math.max(0, opacity) + ')'; ctx.fill();
+      }
+
+      // ── Draw decorative constellations ──
+      for (var d = 0; d < decorations.length; d++) {
+        var dec = decorations[d];
+        dec.time += 1;
+        var dt = dec.time * dec.orbitSpeed;
+        var dcx = W * (dec.baseX + Math.sin(dt) * dec.orbitRadiusX);
+        var dcy = H * (dec.baseY + Math.cos(dt * dec.orbitPhaseY) * dec.orbitRadiusY);
+        var dscale = Math.min(W, H) * dec.size;
+        var dstars = getAbsStars(dec.stars, dcx, dcy, dscale);
+
+        ctx.beginPath();
+        for (var ei = 0; ei < dec.edges.length; ei++) {
+          ctx.moveTo(dstars[dec.edges[ei][0]].absX, dstars[dec.edges[ei][0]].absY);
+          ctx.lineTo(dstars[dec.edges[ei][1]].absX, dstars[dec.edges[ei][1]].absY);
+        }
+        ctx.strokeStyle = 'rgba(' + dec.color + ',0.1)'; ctx.lineWidth = 0.8; ctx.stroke();
+
+        for (var si = 0; si < dstars.length; si++) {
+          ctx.beginPath(); ctx.arc(dstars[si].absX, dstars[si].absY, 1.2, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(' + dec.color + ',0.45)'; ctx.fill();
+        }
+      }
+
+      // ── Draw Virgo (interactive) ──
+      virgoMotion.time += 1;
+      var vt = virgoMotion.time * virgoMotion.orbitSpeed;
+      var vcx = W * (virgoMotion.baseX + Math.sin(vt) * virgoMotion.orbitRadiusX);
+      var vcy = H * (virgoMotion.baseY + Math.cos(vt * virgoMotion.orbitPhaseY) * virgoMotion.orbitRadiusY);
+      var vscale = Math.min(W, H) * virgoMotion.size;
+      var vStars = getAbsStars(virgoStars, vcx, vcy, vscale);
+
+      // lines glow
+      ctx.beginPath();
+      for (var ei = 0; ei < virgoEdges.length; ei++) {
+        ctx.moveTo(vStars[virgoEdges[ei][0]].absX, vStars[virgoEdges[ei][0]].absY);
+        ctx.lineTo(vStars[virgoEdges[ei][1]].absX, vStars[virgoEdges[ei][1]].absY);
+      }
+      ctx.strokeStyle = 'rgba(150, 200, 255, 0.04)'; ctx.lineWidth = 5; ctx.stroke();
+
+      ctx.beginPath();
+      for (var ei = 0; ei < virgoEdges.length; ei++) {
+        ctx.moveTo(vStars[virgoEdges[ei][0]].absX, vStars[virgoEdges[ei][0]].absY);
+        ctx.lineTo(vStars[virgoEdges[ei][1]].absX, vStars[virgoEdges[ei][1]].absY);
+      }
+      ctx.strokeStyle = 'rgba(150, 200, 255, 0.12)'; ctx.lineWidth = 1; ctx.stroke();
+
+      // Virgo stars
+      hoveredStarIdx = -1;
+      var hoverRadius = 14;
+      for (var si = 0; si < vStars.length; si++) {
+        var s = vStars[si];
+        var dx = mouseX - s.absX; var dy = mouseY - s.absY;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var isHovered = false;
+        if (dist < hoverRadius && mouseX >= 0) { isHovered = true; hoveredStarIdx = si; canvas.style.cursor = 'pointer'; }
+
+        var glow = ctx.createRadialGradient(s.absX, s.absY, 0, s.absX, s.absY, isHovered ? 24 : 14);
+        glow.addColorStop(0, isHovered ? 'rgba(200,230,255,0.6)' : 'rgba(150,200,255,0.15)');
+        glow.addColorStop(1, 'transparent');
+        ctx.beginPath(); ctx.arc(s.absX, s.absY, isHovered ? 24 : 14, 0, Math.PI * 2);
+        ctx.fillStyle = glow; ctx.fill();
+
+        var starR = isHovered ? 4 : 2.5;
+        ctx.beginPath(); ctx.arc(s.absX, s.absY, starR, 0, Math.PI * 2);
+        ctx.fillStyle = isHovered ? '#d0e8ff' : 'rgba(180, 215, 255, 0.7)'; ctx.fill();
+
+        if (isHovered) {
+          ctx.font = '11px Inter, sans-serif'; ctx.fillStyle = 'rgba(180, 210, 255, 0.8)'; ctx.textAlign = 'center';
+          ctx.fillText('VIRGO . ' + virgoStars[si].label, s.absX, s.absY - 18);
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+    requestAnimationFrame(draw);
+  </script>
 </body>
 </html>
