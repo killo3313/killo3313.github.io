@@ -50,13 +50,16 @@
       content: ''; position: absolute; left: 0; right: 0; bottom: -6px; height: 1px;
       background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
     }
+
+    /* ── Desktop 3D Carousel ── */
     .carousel-stage {
       perspective: 900px; perspective-origin: center center;
       width: 100%; display: flex; justify-content: center;
       overflow: visible;
     }
     .carousel {
-      position: relative; width: 480px; max-width: 100%; height: 280px;
+      position: relative; width: 480px; height: 280px;
+      max-width: 100%;
       transform-style: preserve-3d;
       transition: transform 0.9s cubic-bezier(0.22, 0.97, 0.36, 1);
     }
@@ -120,29 +123,49 @@
       .card-2 { transform: rotateY(240deg) translateZ(200px); }
     }
 
-    /* ── Mobile ── */
+    /* ── Mobile: switch to simple 2D card stack ── */
     @media (max-width: 480px) {
       body { padding: 1.5rem 1rem; }
-      .carousel { height: 260px; }
-      .carousel-stage { perspective: 500px; }
-      .card { padding: 1.25rem 1.25rem; }
-      .card-0 { transform: rotateY(0deg) translateZ(120px); }
-      .card-1 { transform: rotateY(120deg) translateZ(120px); }
-      .card-2 { transform: rotateY(240deg) translateZ(120px); }
+      .carousel-stage { perspective: none; }
+      .carousel {
+        height: 270px;
+        transform-style: flat;
+        transition: none;
+        width: 100%;
+      }
+      .card {
+        backface-visibility: visible;
+        transition: opacity 0.35s ease, transform 0.35s ease;
+        opacity: 0;
+        transform: scale(0.92) translateY(12px);
+        pointer-events: none;
+        padding: 1.25rem;
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+      }
+      .card.active {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        pointer-events: auto;
+        position: relative;
+      }
+      .card-0, .card-1, .card-2 {
+        transform: none !important;
+        position: absolute;
+      }
+      .card-0.active, .card-1.active, .card-2.active {
+        position: relative;
+      }
       .avatar { width: 100px; height: 100px; }
-      .name { font-size: 1.6rem; }
+      .name { font-size: 1.6rem; margin-bottom: 1.5rem; }
       .card-icon { font-size: 2rem; }
-      .card-item { padding: 0.5rem 0; font-size: 0.85rem; }
+      .card-item { padding: 0.5rem 0; font-size: 0.88rem; }
       .card-title { font-size: 0.7rem; }
     }
 
-    /* ── Very small screens ── */
+    /* ── Very small ── */
     @media (max-width: 360px) {
-      .carousel { height: 240px; }
-      .carousel-stage { perspective: 400px; }
-      .card-0 { transform: rotateY(0deg) translateZ(90px); }
-      .card-1 { transform: rotateY(120deg) translateZ(90px); }
-      .card-2 { transform: rotateY(240deg) translateZ(90px); }
+      .carousel { height: 250px; }
     }
   </style>
 </head>
@@ -155,7 +178,7 @@
     <h1 class="name">killo</h1>
     <div class="carousel-stage">
       <div class="carousel" id="carousel">
-        <div class="card card-0">
+        <div class="card card-0" data-card="0">
           <div class="card-content">
             <div class="card-title">EARTH ONLINE PLAYER INFO</div>
             <div class="card-item">
@@ -172,7 +195,7 @@
             </div>
           </div>
         </div>
-        <div class="card card-1">
+        <div class="card card-1" data-card="1">
           <div class="card-content">
             <div class="card-icon">🍽️</div>
             <div class="card-title">FAVORITE FOODS</div>
@@ -190,7 +213,7 @@
             </div>
           </div>
         </div>
-        <div class="card card-2">
+        <div class="card card-2" data-card="2">
           <div class="card-content">
             <div class="card-icon">💫</div>
             <div class="card-title">WANTS</div>
@@ -248,15 +271,49 @@
     ];
 
     var carousel = document.getElementById('carousel');
+    var cards = document.querySelectorAll('.card');
     var hint = document.getElementById('hint');
     var currentCard = 0;
     var totalCards = 3;
+    var isMobile = window.innerWidth <= 480;
+
     function rotateToCard(index) {
       currentCard = index;
-      carousel.style.transform = 'rotateY(' + (-currentCard * 120) + 'deg)';
       var labels = ['earth online', 'favorite foods', 'wants'];
       hint.textContent = labels[index];
+
+      if (isMobile) {
+        // Mobile: use active class for 2D fade
+        cards.forEach(function(c, i) {
+          c.classList.toggle('active', i === index);
+        });
+      } else {
+        // Desktop: use 3D rotation
+        carousel.style.transform = 'rotateY(' + (-currentCard * 120) + 'deg)';
+      }
     }
+
+    // Handle resize to switch modes
+    window.addEventListener('resize', function() {
+      var nowMobile = window.innerWidth <= 480;
+      if (nowMobile !== isMobile) {
+        isMobile = nowMobile;
+        if (isMobile) {
+          carousel.style.transform = '';
+          cards.forEach(function(c) { c.classList.remove('active'); });
+          cards[currentCard].classList.add('active');
+        } else {
+          cards.forEach(function(c) { c.classList.remove('active'); });
+          carousel.style.transform = 'rotateY(' + (-currentCard * 120) + 'deg)';
+        }
+      }
+    });
+
+    // Init: show card 0
+    if (isMobile) {
+      cards[0].classList.add('active');
+    }
+
     document.getElementById('avatarBtn').addEventListener('click', function() { rotateToCard(0); });
 
     var mouseX = -1, mouseY = -1, hoveredStarIdx = -1;
@@ -277,14 +334,12 @@
 
     function draw(time) {
       ctx.clearRect(0, 0, W, H);
-
       for (var bi = 0; bi < bgStars.length; bi++) {
         var bs = bgStars[bi];
         var opacity = bs.baseOpacity + Math.sin(time * 0.002 * bs.speed + bs.phase) * 0.3;
         ctx.beginPath(); ctx.arc(bs.x * W, bs.y * H, bs.r, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255,255,255,' + Math.max(0, opacity) + ')'; ctx.fill();
       }
-
       for (var d = 0; d < decorations.length; d++) {
         var dec = decorations[d];
         dec.time += 1;
@@ -293,41 +348,35 @@
         var dcy = H * (dec.baseY + Math.cos(dt * dec.orbitPhaseY) * dec.orbitRadiusY);
         var dscale = Math.min(W, H) * dec.size;
         var dstars = getAbsStars(dec.stars, dcx, dcy, dscale);
-
         ctx.beginPath();
         for (var ei = 0; ei < dec.edges.length; ei++) {
           ctx.moveTo(dstars[dec.edges[ei][0]].absX, dstars[dec.edges[ei][0]].absY);
           ctx.lineTo(dstars[dec.edges[ei][1]].absX, dstars[dec.edges[ei][1]].absY);
         }
         ctx.strokeStyle = 'rgba(' + dec.color + ',0.1)'; ctx.lineWidth = 0.8; ctx.stroke();
-
         for (var si = 0; si < dstars.length; si++) {
           ctx.beginPath(); ctx.arc(dstars[si].absX, dstars[si].absY, 1.2, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(' + dec.color + ',0.45)'; ctx.fill();
         }
       }
-
       virgoMotion.time += 1;
       var vt = virgoMotion.time * virgoMotion.orbitSpeed;
       var vcx = W * (virgoMotion.baseX + Math.sin(vt) * virgoMotion.orbitRadiusX);
       var vcy = H * (virgoMotion.baseY + Math.cos(vt * virgoMotion.orbitPhaseY) * virgoMotion.orbitRadiusY);
       var vscale = Math.min(W, H) * virgoMotion.size;
       var vStars = getAbsStars(virgoStars, vcx, vcy, vscale);
-
       ctx.beginPath();
       for (var ei = 0; ei < virgoEdges.length; ei++) {
         ctx.moveTo(vStars[virgoEdges[ei][0]].absX, vStars[virgoEdges[ei][0]].absY);
         ctx.lineTo(vStars[virgoEdges[ei][1]].absX, vStars[virgoEdges[ei][1]].absY);
       }
       ctx.strokeStyle = 'rgba(150, 200, 255, 0.04)'; ctx.lineWidth = 5; ctx.stroke();
-
       ctx.beginPath();
       for (var ei = 0; ei < virgoEdges.length; ei++) {
         ctx.moveTo(vStars[virgoEdges[ei][0]].absX, vStars[virgoEdges[ei][0]].absY);
         ctx.lineTo(vStars[virgoEdges[ei][1]].absX, vStars[virgoEdges[ei][1]].absY);
       }
       ctx.strokeStyle = 'rgba(150, 200, 255, 0.12)'; ctx.lineWidth = 1; ctx.stroke();
-
       hoveredStarIdx = -1;
       var hoverRadius = 14;
       for (var si = 0; si < vStars.length; si++) {
@@ -336,17 +385,14 @@
         var dist = Math.sqrt(dx * dx + dy * dy);
         var isHovered = false;
         if (dist < hoverRadius && mouseX >= 0) { isHovered = true; hoveredStarIdx = si; canvas.style.cursor = 'pointer'; }
-
         var glow = ctx.createRadialGradient(s.absX, s.absY, 0, s.absX, s.absY, isHovered ? 24 : 14);
         glow.addColorStop(0, isHovered ? 'rgba(200,230,255,0.6)' : 'rgba(150,200,255,0.15)');
         glow.addColorStop(1, 'transparent');
         ctx.beginPath(); ctx.arc(s.absX, s.absY, isHovered ? 24 : 14, 0, Math.PI * 2);
         ctx.fillStyle = glow; ctx.fill();
-
         var starR = isHovered ? 4 : 2.5;
         ctx.beginPath(); ctx.arc(s.absX, s.absY, starR, 0, Math.PI * 2);
         ctx.fillStyle = isHovered ? '#d0e8ff' : 'rgba(180, 215, 255, 0.7)'; ctx.fill();
-
         if (isHovered) {
           ctx.font = '11px Inter, sans-serif'; ctx.fillStyle = 'rgba(180, 210, 255, 0.8)'; ctx.textAlign = 'center';
           ctx.fillText('VIRGO . ' + virgoStars[si].label, s.absX, s.absY - 18);
